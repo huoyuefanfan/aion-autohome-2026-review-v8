@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>广汽埃安2026年1–9月线索复盘 V8 演示版</title>
 <style>
@@ -76,7 +76,7 @@ section.slide{height:calc(100dvh - var(--deckbar));min-height:0;width:100%;scrol
  <div class="slide-body"><div class="metric-strip">
   <div><span>2026年9月在线家数</span><strong>244家</strong><em>汽车之家合作商家</em></div>
   <div><span>较2025年9月</span><strong>+37.1%</strong><em>178家 → 244家，增加66家</em></div>
- </div><div class="plot"><div class="plot-head"><h3>埃安合作商家月度在线家数</h3><span>2025年1月–2026年9月</span></div><div class="chart" id="dealers-online"></div></div>
+ </div><div class="plot"><div class="plot-head"><h3>埃安合作商家月度在线家数</h3><span>2025年 / 2026年，2026年截至9月</span></div><div class="chart" id="dealers-online"></div></div>
  </div>
  <div class="slide-foot"><span class="slide-source">数据来源：汽车之家；单位：家</span><div class="slide-detail-buttons"><button class="detail-button" data-open-dialog="online-dealers-dialog">在线家数月度明细</button></div></div>
 </section><section class="slide" id="attention-competition"><header class="slide-heading"><h2>埃安关注规模与竞品相比仍有差距</h2><p class="slide-description">关注人数是线索基础，存在高度关联性，零跑和银河关注规模为埃安的2.7、3.0倍</p></header><div class="slide-body"><div class="two"><div class="plot"><div class="plot-head"><h3 id="brand-chart-title">品牌关注人数趋势</h3><div class="controls" id="brand-controls"><button class="active" data-field="attention">关注人数</button><button data-field="people">线索人数</button></div><span>万人</span></div><div class="chart" id="attention"></div></div><div class="plot"><div class="plot-head"><h3>关注与线索趋势对照</h3><select id="competitor" aria-label="选择品牌"><option value="零跑汽车">零跑</option><option value="吉利银河">银河</option><option value="深蓝汽车">深蓝</option><option value="埃安">埃安</option></select></div><div class="chart" id="relation"></div></div></div></div><div class="slide-foot"><span class="slide-source">数据来源：汽车之家、车智云；竞品线索仅展示相对趋势</span><div class="slide-detail-buttons"><button class="detail-button" data-open-dialog="data-dialog-5" data-attention-detail="true">关注人数明细</button></div></div></section><section class="slide" id="funnel"><header class="slide-heading"><h2>埃安的关注漏斗转化率保持稳定，整体转化效率较好</h2><p class="slide-description">关注到兴趣转化相对稳定，兴趣到线索转化有一定波动，9月份达到高值</p></header><div class="slide-body"><div class="pane-tabs"><button class="active" data-pane="funnel-overview">漏斗转化</button><button data-pane="funnel-monthly">月度趋势</button></div><div class="deck-pane plot funnel-overview" id="funnel-overview">
@@ -147,10 +147,10 @@ function chart(id,labels,ss,opt={}){
  const step=opt.labelStep|| (labels.length>16?4:labels.length>10?2:1);
  labels.forEach((v,i)=>{if(i%step===0||i===labels.length-1)svg+=`<text text-anchor="middle" x="${x(i)}" y="${H-14}">${v}</text>`;});
  ss.forEach((s,k)=>{
-  const pts=s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+  const pts=s.values.map((v,i)=>Number.isFinite(v)?`${x(i)},${y(v)}`:null).filter(v=>v!==null).join(' ');
   if(opt.area&&k===0)svg+=`<polygon points="${x(0)},${y(low)} ${pts} ${x(labels.length-1)},${y(low)}" fill="${s.color}" opacity=".08"/>`;
   svg+=`<polyline fill="none" stroke="${s.color}" stroke-width="${k===0?3:2.4}" ${s.dash?'stroke-dasharray="6 4"':''} points="${pts}"/>`;
-  s.values.forEach((v,i)=>{if(id==='leadquantity'&&leadField==='people'&&s.name==='2026年'&&lo+i===8){
+  s.values.forEach((v,i)=>{if(!Number.isFinite(v))return;if(id==='leadquantity'&&leadField==='people'&&s.name==='2026年'&&lo+i===8){
  if(i>0)svg+=`<line x1="${x(i-1)}" y1="${y(s.values[i-1])}" x2="${x(i)}" y2="${y(v)}" stroke="#db8732" stroke-width="3.5"/>`;
  svg+=`<circle cx="${x(i)}" cy="${y(v)}" r="8" fill="#fff" stroke="#db8732" stroke-width="2"/><circle cx="${x(i)}" cy="${y(v)}" r="4.8" fill="#db8732"><title>9月线索人数提升</title></circle>`;return;
  }svg+=`<circle class="dot" fill="${s.color}" cx="${x(i)}" cy="${y(v)}" r="${labels.length>20?2.5:3.8}"/>`;});
@@ -256,10 +256,11 @@ document.querySelectorAll('#brand-controls button').forEach(b=>b.addEventListene
 updateDeck(0);draw();
 
 function dealerOnline(){
- const months=Object.keys(A).filter(m=>m>='2025-01'&&m<='2026-09').sort();
- const labels=months.map(m=>m.slice(2).replace('-','/'));
- chart('dealers-online',labels,[series('汽车之家合作商家在线家数',months.map(m=>A[m].dealers),BLUE)],{unit:'家（纵轴局部放大）',min:150,max:270,labelStep:1,value:v=>fmt(v)+'家'});
- const [lo,hi]=range('dealers-online',months.length);
- document.getElementById('dealers-online-table').innerHTML=table(['月份','在线家数'],months.slice(lo,hi+1).map(m=>[m,fmt(A[m].dealers)+'家']));
+ const labels=Array.from({length:12},(_,i)=>(i+1)+'月');
+ const vals=y=>labels.map((_,i)=>A[y+'-'+String(i+1).padStart(2,'0')]?.dealers??null);
+ const v25=vals('2025'),v26=vals('2026');
+ chart('dealers-online',labels,[series('2025年',v25,'#9db5cf'),series('2026年',v26,BLUE)],{unit:'家（纵轴局部放大）',min:150,max:270,labelStep:1,value:v=>Number.isFinite(v)?fmt(v)+'家':'暂无数据'});
+ const [lo,hi]=range('dealers-online',12);
+ document.getElementById('dealers-online-table').innerHTML=table(['月份','2025年','2026年'],labels.slice(lo,hi+1).map((m,i)=>[m,fmt(v25[lo+i])+'家',Number.isFinite(v26[lo+i])?fmt(v26[lo+i])+'家':'—']));
 }
 </script></body></html>
